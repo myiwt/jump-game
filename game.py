@@ -8,10 +8,57 @@ WIDTH = 800
 HEIGHT = 450
 TILESIZE = images.dirt.get_height()
 
+class Background():
+    images = {"background": images.background,
+              "dirt" : images.dirt,
+              "grass" : images.grassbackground}
+
+    def __init__(self):
+        self.dirt_height = self.dirt_width = self.grass_height = TILESIZE
+        self.grass_width = self.images["grass"].get_width()
+        self.background_x = 0
+        self.background2_x = self.images["background"].get_width()
+        self.grass_x = 0
+        self.grass2_x = self.images["grass"].get_width()
+        self.grass_y = HEIGHT - TILESIZE
+
+    def draw(self):
+        screen.blit(self.images["background"], (self.background_x, 0))
+        screen.blit(self.images["background"], (self.background2_x, 0))
+        screen.blit(self.images["grass"], (self.grass_x, self.grass_y))
+        screen.blit(self.images["grass"], (self.grass2_x, self.grass_y))
+
+        self.background_x -= 5
+        self.background2_x -= 5
+        self.grass_x -= 5
+        self.grass2_x -= 5
+
+        if self.background_x < self.images["background"].get_width() * -1:
+            self.background_x = self.images["background"].get_width()
+
+        if self.background2_x < self.images["background"].get_width() * -1:
+            self.background2_x = self.images["background"].get_width()
+
+        if self.grass_x < self.images["grass"].get_width() * -1:
+            self.grass_x = self.images["grass"].get_width()
+
+        if self.grass2_x < self.images["grass"].get_width() * -1:
+            self.grass2_x = self.images["grass"].get_width() - 2
+
 class GameState():
-    game_over = False
-    score = 0
-    player_hit = False
+    def __init__(self):
+        self.game_over = False
+        self.score = 0
+        self.player_hit = False
+
+    def make_invulnerable(self):
+        self.player_hit = False
+
+    def make_vulnerable(self):
+        self.player_hit = True
+        sounds.eep.play()
+        print('hit')
+        clock.schedule_unique(self.make_invulnerable,1.0)
 
 class Character():
     player_images = {"RUN":
@@ -64,49 +111,6 @@ class Character():
         # Hit box - delete before production
         screen.draw.rect(self.hitbox, color="RED")
 
-    def player_hit(self):
-        sounds.eep.play()
-        print('hit')
-
-
-class Background():
-    images = {"background": images.background,
-              "dirt" : images.dirt,
-              "grass" : images.grassbackground
-    }
-
-    def __init__(self):
-        self.dirt_height = self.dirt_width = self.grass_height = TILESIZE
-        self.grass_width = self.images["grass"].get_width()
-        self.background_x = 0
-        self.background2_x = self.images["background"].get_width()
-        self.grass_x = 0
-        self.grass2_x = self.images["grass"].get_width()
-        self.grass_y = HEIGHT - TILESIZE
-
-    def draw(self):
-        screen.blit(self.images["background"], (self.background_x, 0))
-        screen.blit(self.images["background"], (self.background2_x, 0))
-        screen.blit(self.images["grass"], (self.grass_x, self.grass_y))
-        screen.blit(self.images["grass"], (self.grass2_x, self.grass_y))
-
-        self.background_x -= 5
-        self.background2_x -= 5
-        self.grass_x -= 5
-        self.grass2_x -= 5
-
-        if self.background_x < self.images["background"].get_width() * -1:
-            self.background_x = self.images["background"].get_width()
-
-        if self.background2_x < self.images["background"].get_width() * -1:
-            self.background2_x = self.images["background"].get_width()
-
-        if self.grass_x < self.images["grass"].get_width() * -1:
-            self.grass_x = self.images["grass"].get_width()
-
-        if self.grass2_x < self.images["grass"].get_width() * -1:
-            self.grass2_x = self.images["grass"].get_width() - 2
-
 class ObstacleGeneration():
     def __init__(self):
         self.level = 1
@@ -134,7 +138,6 @@ class Spike(object):
         self.y = HEIGHT - TILESIZE - 15
         self.width = self.image.get_width()
         self.height = self.image.get_height()
-        #self.hitbox = Rect((x, self.y), (self.width, self.height))
         self.hit_once = False
 
     def draw(self):
@@ -153,7 +156,6 @@ game = GameState()
 player = Character()
 background = Background()
 obstaclegeneration = ObstacleGeneration()
-#spike = Spike()
 map = obstaclegeneration.map_width_generator(0.005)
 obj_list = []
 for pixel in enumerate(map):
@@ -166,9 +168,8 @@ def draw():
     for obj in obj_list:
         obj.draw()
 
-
 def game_loop():
-    if GameState.game_over:
+    if game.game_over:
         return
     if keyboard.up:
         player.jump = True
@@ -176,8 +177,7 @@ def game_loop():
     if game.player_hit == False:
         for obj in obj_list:
             if obj.collide(player.hitbox):
-                player.player_hit()
-                game.player_hit = True
+                game.make_vulnerable()
 
 clock.schedule_interval(game_loop, 0.03)
 pgzrun.go()
