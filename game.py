@@ -4,7 +4,6 @@ import time
 import random
 
 # ---GLOBAL GAME VARIABLES--- #
-
 WIDTH = 800
 HEIGHT = 450
 TILESIZE = images.dirt.get_height()
@@ -112,6 +111,8 @@ class ObstacleGeneration():
     def __init__(self):
         self.level = 1
         self.empty_map_width = [0] * WIDTH
+        self.object_id = {1: 'spike'}
+        self.obstacle_list = []
 
     def map_width_generator(self, probability):
         map_width = self.empty_map_width
@@ -121,23 +122,27 @@ class ObstacleGeneration():
                 map_width[pixel[0]] = 1
         return map_width
 
-    def draw_obstacles(self, ):
+    def obstacale_generator(self,objectid,x):
+        #[objectid, x, y]
+        self.obstacle_list.append([objectid,x,HEIGHT - TILESIZE - 15])
 
-class Spike():
+class Spike(object):
     image = images.spike
-    def __init__(self):
-        #self.x = WIDTH
+    def __init__(self, x = WIDTH,hitbox = Rect(0,0,0,0)):
+        self.x = x
+        self.hitbox = hitbox
         self.y = HEIGHT - TILESIZE - 15
         self.width = self.image.get_width()
         self.height = self.image.get_height()
-        self.hitbox = Rect((self.x, self.y), (self.width, self.height))
+        #self.hitbox = Rect((x, self.y), (self.width, self.height))
         self.hit_once = False
 
-    def draw(self,x):
-        screen.blit(self.image,(x,self.y))
+    def draw(self):
+        screen.blit(self.image,(self.x,self.y))
         self.hitbox = Rect((self.x, self.y), (self.width, self.height))
         screen.draw.rect(self.hitbox, color="RED")
         self.x -= 5
+        return self.hitbox
 
     def collide(self,rect):
         if self.hitbox.colliderect(rect):
@@ -147,21 +152,32 @@ class Spike():
 game = GameState()
 player = Character()
 background = Background()
-spike = Spike()
+obstaclegeneration = ObstacleGeneration()
+#spike = Spike()
+map = obstaclegeneration.map_width_generator(0.005)
+obj_list = []
+for pixel in enumerate(map):
+    if pixel[1] == 1:
+        obj_list.append(Spike(x=pixel[0]))
+
 def draw():
     background.draw()
     player.draw()
-    spike.draw()
+    for obj in obj_list:
+        obj.draw()
+
 
 def game_loop():
     if GameState.game_over:
         return
     if keyboard.up:
         player.jump = True
-    if spike.collide(player.hitbox) and game.player_hit == False:
-        player.player_hit()
-        game.player_hit = True
 
+    if game.player_hit == False:
+        for obj in obj_list:
+            if obj.collide(player.hitbox):
+                player.player_hit()
+                game.player_hit = True
 
 clock.schedule_interval(game_loop, 0.03)
 pgzrun.go()
