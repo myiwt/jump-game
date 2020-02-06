@@ -1,17 +1,17 @@
+# To run this game, open a command prompt terminal, type in: cd <the folder path this script is in>. Then type in the command :pgzrun game.py
 import pgzrun
 import time
+import random
 
 # ---GLOBAL GAME VARIABLES--- #
 
+WIDTH = 800
+HEIGHT = 450
+TILESIZE = images.dirt.get_height()
+
 class GameState():
-    WIDTH = 800
-    HEIGHT = 450
-    TILESIZE = images.dirt.get_height()
-    HEIGHT = TILESIZE * 9
-    WIDTH = TILESIZE * 13
     game_over = False
     score = 0
-    gamemap = [0] * WIDTH * 60
     player_hit = False
 
 class Character():
@@ -25,8 +25,8 @@ class Character():
                          [images.jump0, images.jump1]}
 
     def __init__(self):
-        self.player_x = GameState.TILESIZE * 2
-        self.player_y = GameState.HEIGHT - GameState.TILESIZE - self.player_images["RUN"][0].get_height() + 3
+        self.player_x = TILESIZE * 2
+        self.player_y = HEIGHT - TILESIZE - self.player_images["RUN"][0].get_height() + 3
         self.player_frame = 0
         self.player_image = self.player_images["RUN"][0]
         self.jump_frame = 0
@@ -68,12 +68,6 @@ class Character():
     def player_hit(self):
         sounds.eep.play()
         print('hit')
-        #clock.schedule_unique(self.god_mode,1)
-
-
-    def god_mode(self):
-        player_hit = True
-        print('godmode')
 
 
 class Background():
@@ -83,13 +77,13 @@ class Background():
     }
 
     def __init__(self):
-        self.dirt_height = self.dirt_width = self.grass_height = GameState.TILESIZE
+        self.dirt_height = self.dirt_width = self.grass_height = TILESIZE
         self.grass_width = self.images["grass"].get_width()
         self.background_x = 0
         self.background2_x = self.images["background"].get_width()
         self.grass_x = 0
         self.grass2_x = self.images["grass"].get_width()
-        self.grass_y = GameState.HEIGHT - GameState.TILESIZE
+        self.grass_y = HEIGHT - TILESIZE
 
     def draw(self):
         screen.blit(self.images["background"], (self.background_x, 0))
@@ -114,30 +108,39 @@ class Background():
         if self.grass2_x < self.images["grass"].get_width() * -1:
             self.grass2_x = self.images["grass"].get_width() - 2
 
+class ObstacleGeneration():
+    def __init__(self):
+        self.level = 1
+        self.empty_map_width = [0] * WIDTH
+
+    def map_width_generator(self, probability):
+        map_width = self.empty_map_width
+        for pixel in enumerate(map_width):
+            rand = random.random()
+            if rand < probability:
+                map_width[pixel[0]] = 1
+        return map_width
+
+    def draw_obstacles(self, ):
 
 class Spike():
     image = images.spike
     def __init__(self):
-        self.x = GameState.WIDTH
-        self.y = GameState.HEIGHT - GameState.TILESIZE - 15
+        #self.x = WIDTH
+        self.y = HEIGHT - TILESIZE - 15
         self.width = self.image.get_width()
         self.height = self.image.get_height()
         self.hitbox = Rect((self.x, self.y), (self.width, self.height))
         self.hit_once = False
 
-    def draw(self):
-        screen.blit(self.image,(self.x,self.y))
+    def draw(self,x):
+        screen.blit(self.image,(x,self.y))
         self.hitbox = Rect((self.x, self.y), (self.width, self.height))
         screen.draw.rect(self.hitbox, color="RED")
         self.x -= 5
 
-
-
     def collide(self,rect):
-        if self.x < rect[0] + rect[2] and \
-        self.x + self.width > rect[0] and \
-        self.y < rect[1] + rect[3] and \
-        self.height + self.height > rect[3]:
+        if self.hitbox.colliderect(rect):
             return True
         return False
 
