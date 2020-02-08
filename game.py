@@ -1,13 +1,14 @@
 # To run this game, open a command prompt terminal, type in: cd <the folder path this script is in>. Then type in the command :pgzrun game.py
 import pgzrun
 import random
+from itertools import islice
 
 # ---GLOBAL GAME VARIABLES--- #
-WIDTH = 800
+WIDTH = 800 # Game window size
 HEIGHT = 450
 TILESIZE = images.dirt.get_height()
 
-def remove_alpha(image):
+def remove_alpha(image): # allows for more efficient image drawing
     return image.convert_alpha()
 
 class Background():
@@ -21,7 +22,7 @@ class Background():
         self.background2_x = self.backgroundimage.get_width()
         self.speed = speed
 
-    def draw(self):
+    def draw(self): # draws moving side scrolling background
         screen.blit(self.backgroundimage, (self.background_x, 0))
         screen.blit(self.backgroundimage, (self.background2_x, 0))
 
@@ -44,7 +45,7 @@ class GameState():
     def make_invulnerable(self):
         self.player_hit = False
 
-    def make_vulnerable(self):
+    def make_vulnerable(self): # When player is hit, they are invulnerable for 1 second before they can be hit again
         self.player_hit = True
         sounds.eep.play()
         print('hit')
@@ -105,27 +106,41 @@ class ObstacleGeneration():
         self.object_id = {1: 'spike'}
         self.obstacle_list = []
         self.player = player
-        self.obstacle_x_buffer = player.width + 10
+        self.obstacle_x_buffer = player.width * 2 # space between objects to allow for player to land
 
     def map_width_generator(self, probability):
         map_width = self.empty_map_width
-        for pixel in enumerate(map_width):
-            rand = random.random()
-            if rand < probability:
-                map_width[pixel[0]] = 1
-        for pixel in enumerate(map_width):
-             if pixel[0] > len(map_width) - self.obstacle_x_buffer:
-                 break
-             if pixel[1] == 1:
-                 for n in range(pixel[0]+ 1, pixel[0]+ self.obstacle_x_buffer):
-                     map_width[n] = 0
+        map_width_iter = iter(map_width)
+        # for pixel in enumerate(map_width):
+        #     rand = random.random()
+        #     if rand < probability:
+        #         for n in range(pixel[0]-self.obstacle_x_buffer, pixel[0]):
+        #             if map_width[n] == 1:
+        #                 continue
+        #                 map_width[pixel[0]] = 1
+#TODO
+#Iterate through empty map list
+#Run random function
+#If random < probability, then the map element = 1
+#Move forward buffer pixels
+        for pixel in map_width_iter:
+             rand = random.random()
+             if rand < probability:
+                 pixel = 1
+                 #for _ in range(self.obstacle_x_buffer):
+                 next(islice(map_width_iter, self.obstacle_x_buffer, self.obstacle_x_buffer+1), '')
+                    # try:
+                    #     next(map_width_iter)
+                    #     continue
+                    # except:
+                    #    break
         print(map_width)
         return map_width
 
     def obstacale_generator(self,objectid,x):
         self.obstacle_list.append([objectid,x,HEIGHT - TILESIZE - 15]) #[objectid, x, y]
 
-    def game_map_generator(self,probability,frames):
+    def game_map_generator(self,probability,frames): # total game should be 5 mins = 75 frames. 4 levels, 25 frames each
         game_map = self.empty_map_width
         for frame in range(0,frames):
             game_map.append(self.map_width_generator(probability = probability))
@@ -133,7 +148,7 @@ class ObstacleGeneration():
 
 class Spike(object):
     image = images.spike
-    def __init__(self, speed,x = WIDTH,hitbox = Rect(0,0,0,0)):
+    def __init__(self, speed, x = WIDTH, hitbox = Rect(0,0,0,0)):
         self.x = x
         self.hitbox = hitbox
         self.y = HEIGHT - TILESIZE - 15
@@ -159,8 +174,7 @@ speed = game.speed
 player = Character()
 background = Background(speed=speed)
 obstaclegeneration = ObstacleGeneration(player = player)
-#map = obstaclegeneration.map_width_generator(probability=0.005)
-map = obstaclegeneration.game_map_generator(probability= 0.005, frames= 5)
+map = obstaclegeneration.game_map_generator(probability= 0.8, frames= 5)
 obj_list = []
 for pixel in enumerate(map):
     if pixel[1] == 1:
