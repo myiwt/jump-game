@@ -4,10 +4,11 @@ from random import random
 import time
 
 # ---GLOBAL GAME VARIABLES--- #
-WIDTH = 800 # Game window size
+WIDTH = 800 # Sets the game window size in Pygame Zero
 HEIGHT = 450
 TILESIZE = images.dirt.get_height()
 
+# Optimises image drawing
 def remove_alpha(image): # allows for more efficient image drawing
     return image.convert_alpha()
 
@@ -31,7 +32,7 @@ class Background(object):
         life_x, life_y = 750, 20
 
         for life in range(lives):
-            screen.blit(self.life_icon, (life_x - life * 35, life_y))
+            screen.blit(self.life_icon, (life_x - life * 35, life_y)) # Draws number of lives left on screen
 
         self.background_x -= self.speed
         self.background2_x -= self.speed
@@ -48,7 +49,7 @@ class GameState(object):
         self.score = 0
         self.player_hit = False
         self.speed = speed
-        self.lives = 2
+        self.lives = 5
         self.probability = 0.005
         #TODO: Define levels and probability levels & speed levels
         level_info = {1: {"probability": 0.001,"speed": 10},
@@ -73,6 +74,7 @@ class GameState(object):
                       fontsize=128, shadow = (1,1), scolor="black")
         screen.draw.text("PRESS SPACEBAR TO PLAY AGAIN", midtop= (400,200), color = "black",
                          fontsize = 35)
+        # TODO: Restart game - at present the gameplay & lives can restart, but the map does not restart
         if keyboard.space:
             self.game_over = False
             self.score = 0
@@ -83,10 +85,10 @@ class GameState(object):
 class Character(object):
     player_images_with_alpha = {"RUN": [images.player0, images.player1, images.player2, images.player3, images.player4,
                                         images.player5, images.player6, images.player7, images.player8],
-                                "JUMP": [images.jump0, images.jump1]}
+                                "JUMP": [images.jump0, images.jump1]} # Image frames to animate character running
 
     player_images = {"RUN": [remove_alpha(image) for image in player_images_with_alpha["RUN"]],
-                     "JUMP": [remove_alpha(image) for image in player_images_with_alpha["JUMP"]]}
+                     "JUMP": [remove_alpha(image) for image in player_images_with_alpha["JUMP"]]} # Optimising image drawing
 
     def __init__(self):
         self.player_x = TILESIZE * 2
@@ -98,7 +100,7 @@ class Character(object):
         self.jumpcount = 10
         self.width = self.player_images["RUN"][self.player_frame].get_width()
         self.height = self.player_images["RUN"][self.player_frame].get_height()
-        self.hitbox = Rect((self.player_x, self.player_y), (self.player_images["RUN"][0].get_width(), self.player_images["RUN"][0].get_height()))
+        self.hitbox = Rect((self.player_x, self.player_y), (self.player_images["RUN"][0].get_width(), self.player_images["RUN"][0].get_height())) # Used to detect if player hits obstacle and loses a life
         self.got_hit = False
 
     def draw(self):
@@ -110,7 +112,7 @@ class Character(object):
             if self.player_frame == len(self.player_images["RUN"])-1:
                 self.player_frame = 1
 
-        elif self.jump:
+        elif self.jump: # Image animations and positions of character when jumping
             image_to_draw = self.player_images["JUMP"][self.jump_frame]
             screen.blit(image_to_draw, (self.player_x, self.player_y))
             self.hitbox = Rect((self.player_x, self.player_y), (image_to_draw.get_width(), image_to_draw.get_height()))
@@ -125,7 +127,7 @@ class Character(object):
             else:
                 self.jump = False
                 self.jumpcount = 10
-        # Hit box - delete before production
+        # TODO: Hit box - delete before production
         screen.draw.rect(self.hitbox, color="RED")
 
 class ObstacleGeneration(object):
@@ -174,17 +176,21 @@ class ObstacleGeneration(object):
 #        obj_list = self.obj_list
 #        for obj in obj_list:
 #            screen.blit(obj.image, (obj.x, obj.y))
-
-class Spike(object):
-    image = remove_alpha(images.spike)
-    def __init__(self, speed, x = WIDTH, hitbox = Rect(0,0,0,0)):
+class GameObject(object): # Parent / super class for obstacles & scenery objects in game
+    image = images.shrub
+    def __init__(self, speed, x=WIDTH):
         self.x = x
-        self.hitbox = hitbox
-        self.y = HEIGHT - TILESIZE - 15
+        self.speed = speed
         self.width = self.image.get_width()
         self.height = self.image.get_height()
+
+class Spike(GameObject):
+    image = remove_alpha(images.spike)
+    def __init__(self, speed, x, hitbox = Rect(0,0,0,0)):
+        super().__init__(speed,x)
+        self.hitbox = hitbox
+        self.y = HEIGHT - TILESIZE - 15
         self.hit_once = False
-        self.speed = speed
 
     def draw(self):
         screen.blit(self.image,(self.x,self.y))
@@ -193,31 +199,27 @@ class Spike(object):
         self.x -= self.speed
         return self.hitbox
 
-    def collide(self,rect):
+    def collide(self,rect): # If the player hits a spike a life is lost
         if self.hitbox.colliderect(rect):
             return True
         return False
 
-class Scenery(object):
+class Scenery(GameObject):
     images = {'shrub': remove_alpha(images.shrub),
               'rock': remove_alpha(images.rock)}
 
     def __init__(self, speed, x = WIDTH, image = 'rock'):
+        super().__init__(speed, x)
         self.image = self.images[image]
-        self.x = x
         self.y = HEIGHT - TILESIZE - self.image.get_height() + 8
-        self.width = self.image.get_width()
-        self.height = self.image.get_height()
-        self.speed = speed
+        #self.width = self.image.get_width()
+        #self.height = self.image.get_height()
 
     def draw(self):
         screen.blit(self.image,(self.x,self.y))
         self.x -= self.speed
-    def collide(self, rect): #TODO No collide function required for any scenery objects
-        rect = 0
-        return False
 
-game = GameState(speed = 5)
+game = GameState(speed = 10)
 player = Character()
 background = Background(speed=game.speed)
 obstaclegeneration = ObstacleGeneration()
@@ -236,7 +238,6 @@ def draw():
 #    obstaclegeneration.draw(obj_list = obj_list)
 
 
-
 def start_game():
     game = GameState()
     player = Character()
@@ -251,8 +252,9 @@ def game_loop():
         player.jump = True
     if game.player_hit == False:
         for obj in obj_list:
-            if obj.collide(player.hitbox):
-                game.make_vulnerable()
+            if hasattr(obj,'collide'):
+                if obj.collide(player.hitbox):
+                    game.make_vulnerable()
 
 def update():
     if not game.game_over:
