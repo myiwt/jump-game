@@ -1,4 +1,3 @@
-# To run this game, open a command prompt terminal, type in: cd <the folder path this script is in>. Then type in the command: pgzrun game.py
 import pgzrun
 from random import random
 import time
@@ -17,7 +16,7 @@ class Background(object):
               "dirt" : images.dirt,
               "life": images.life_icon}
 
-    def __init__(self, speed):
+    def __init__(self, speed = 7):
         self.dirt_height = self.dirt_width = self.grass_height = TILESIZE
         self.backgroundimage = remove_alpha(self.images["background"])
         self.background_x = 0
@@ -44,18 +43,13 @@ class Background(object):
             self.background2_x = self.images["background"].get_width()
 
 class GameState(object):
-    def __init__(self, speed = 10):
+    def __init__(self, speed = 7):
         self.game_over = False
         self.score = 0
         self.player_hit = False
         self.speed = speed
-        self.lives = 5
-        self.probability = 0.005
-        #TODO: Define levels and probability levels & speed levels
-        level_info = {1: {"probability": 0.001,"speed": 10},
-                      2: {"probability": 0.05 , "speed": 5},
-                      3: {"probability": 0.05, "speed": 5},
-                      4: {"probability": 0.05, "speed": 5}}
+        self.lives = 10
+        self.obstacle_probability = 0.005
 
     def make_invulnerable(self):
         self.player_hit = False
@@ -79,12 +73,14 @@ class GameState(object):
             self.game_over = False
             self.score = 0
             self.player_hit = False
-            self.speed = 20
+            self.speed = game.speed
             self.lives = 5
 
 class Character(object):
     player_images_with_alpha = {"RUN": [images.player0, images.player1, images.player2, images.player3, images.player4,
-                                        images.player5, images.player6, images.player7, images.player8],
+                                        images.player5, images.player6, images.player7, images.player8, images.player9,
+                                        images.player10, images.player11, images.player12, images.player13, images.player14,
+                                        images.player15, images.player16, images.player17],
                                 "JUMP": [images.jump0, images.jump1]} # Image frames to animate character running
 
     player_images = {"RUN": [remove_alpha(image) for image in player_images_with_alpha["RUN"]],
@@ -131,31 +127,40 @@ class Character(object):
         screen.draw.rect(self.hitbox, color="RED")
 
 class ObstacleGeneration(object):
-    def __init__(self):
+    def __init__(self, speed = 7):
         self.level = 1
         self.object_id = {1: 'spike', 2:'shrub'}
-
-    def map_generator(self, probability = 0.005, frames = 5):
-        self.obstacle_x_buffer = player.width * 6 # minimum space between obstacles to allow for player have a chance to land and jump to avoid obstacles
-        self.shrub_buffer = images.shrub.get_width() * 3
-        self.rock_buffer = images.rock.get_width()* 3
+        self.speed = speed
+    def map_generator(self, obstacle_probability = 0.005, frames = 100):
+        self.buffer_multiplier = 3
+        self.obstacle_x_buffer = player.width * self.buffer_multiplier * 2 # minimum space between obstacles to allow for player have a chance to jump and land to avoid obstacles
+        self.shrub_buffer = Shrub.image.get_width() * self.buffer_multiplier
+        self.rock_buffer = Rock.image.get_width() * self.buffer_multiplier
+        self.door_buffer = Door.image.get_width() * self.buffer_multiplier
         game_map = [0] * WIDTH * 2 # First 2 frames of all games will have no objects generated
-        for frame in range(1, frames+ 1):
+        for frame in range(1, frames + 1):
+            for _ in range(self.obstacle_x_buffer): # Ensure that the starts and ends of object frames do not have objects generating too close to each other
+                game_map.append(0)
             while len(game_map) < WIDTH * frame:
                 rand = random()
-                if rand < probability:
+                if rand < obstacle_probability:
                     game_map.append(1)
                     for _ in range(self.obstacle_x_buffer):
                         if len(game_map) < WIDTH * frame:
                             game_map.append(0)
-                if rand > probability and rand < 0.006:
+                if rand > obstacle_probability and rand < (obstacle_probability+0.001):
                     game_map.append(2)
                     for _ in range(self.shrub_buffer):
                         if len(game_map) < WIDTH * frame:
                             game_map.append(0)
-                if rand > 0.006 and rand < 0.007:
+                if rand > (obstacle_probability+0.001) and rand < (obstacle_probability+0.002):
                     game_map.append(3)
                     for _ in range(self.rock_buffer):
+                        if len(game_map) < WIDTH * frame:
+                            game_map.append(0)
+                if rand > (obstacle_probability + 0.002) and rand < (obstacle_probability + 0.003):
+                    game_map.append(4)
+                    for _ in range(self.door_buffer):
                         if len(game_map) < WIDTH * frame:
                             game_map.append(0)
                 else:
@@ -165,18 +170,16 @@ class ObstacleGeneration(object):
         self.obj_list = []
         for pixel in enumerate(game_map):
             if pixel[1] == 1:
-                self.obj_list.append(Spike(speed=game.speed, x=pixel[0]))
+                self.obj_list.append(Spike(speed=self.speed, x=pixel[0]))
             if pixel[1] == 2:
-                self.obj_list.append(Scenery(speed = game.speed, x = pixel[0], image = 'shrub'))
+                self.obj_list.append(Shrub(speed = self.speed, x = pixel[0]))
             if pixel[1] == 3:
-                self.obj_list.append(Scenery(speed = game.speed, x = pixel[0], image = 'rock'))
+                self.obj_list.append(Rock(speed = self.speed, x = pixel[0]))
+            if pixel[1] == 4:
+                self.obj_list.append(Door(speed=self.speed, x=pixel[0]))
         return self.obj_list
 
-#    def draw(self, obj_list):
-#        obj_list = self.obj_list
-#        for obj in obj_list:
-#            screen.blit(obj.image, (obj.x, obj.y))
-class GameObject(object): # Parent / super class for obstacles & scenery objects in game
+class GameObject(object): # Class for obstacles & scenery objects
     image = images.shrub
     def __init__(self, speed, x=WIDTH):
         self.x = x
@@ -185,7 +188,7 @@ class GameObject(object): # Parent / super class for obstacles & scenery objects
         self.height = self.image.get_height()
 
 class Spike(GameObject):
-    image = remove_alpha(images.spike)
+    image = remove_alpha(images.spike1)
     def __init__(self, speed, x, hitbox = Rect(0,0,0,0)):
         super().__init__(speed,x)
         self.hitbox = hitbox
@@ -204,50 +207,73 @@ class Spike(GameObject):
             return True
         return False
 
-class Scenery(GameObject):
-    images = {'shrub': remove_alpha(images.shrub),
-              'rock': remove_alpha(images.rock)}
+class Door(GameObject):
+    image = remove_alpha(images.door)
+    def __init__(self, speed, x, hitbox = Rect(0,0,0,0)):
+        super().__init__(speed,x)
+        self.hitbox = hitbox
+        self.y = HEIGHT - self.image.get_height() - TILESIZE + 14
+        self.hit_once = False
 
-    def __init__(self, speed, x = WIDTH, image = 'rock'):
+    def draw(self):
+        screen.blit(self.image,(self.x,self.y))
+        self.hitbox = Rect((self.x, self.y), (self.width, self.height))
+        screen.draw.rect(self.hitbox, color="RED")
+        self.x -= self.speed
+        return self.hitbox
+
+    def enter_door(self,rect): # If the player fully intersects a door, the player will teleport
+        if self.hitbox.contains(rect):
+            rand = random()
+            if rand < 0.7:
+                travel = rand
+            else:
+                travel = -(1 - rand)
+            print(travel)
+            return travel
+        else:
+            return False
+
+class Shrub(GameObject):
+    image = remove_alpha(images.shrub)
+
+    def __init__(self, speed, x = WIDTH):
         super().__init__(speed, x)
-        self.image = self.images[image]
         self.y = HEIGHT - TILESIZE - self.image.get_height() + 8
-        #self.width = self.image.get_width()
-        #self.height = self.image.get_height()
 
     def draw(self):
         screen.blit(self.image,(self.x,self.y))
         self.x -= self.speed
 
-game = GameState(speed = 10)
-player = Character()
-background = Background(speed=game.speed)
-obstaclegeneration = ObstacleGeneration()
-obj_list = obstaclegeneration.map_generator(probability = game.probability, frames = 20)
+class Rock(Shrub):
+    image = remove_alpha(images.rock)
 
+    def __init__(self, speed, x = WIDTH,):
+        super().__init__(speed, x)
+
+game = GameState()
+player = Character()
+background = Background()
+obstaclegeneration = ObstacleGeneration()
+obj_list = obstaclegeneration.map_generator(obstacle_probability = game.obstacle_probability, frames = 100)
 
 def draw():
     if not game.game_over:
         background.draw(lives = game.lives)
-        player.draw()
         for obj in obj_list:
             obj.draw()
+        player.draw()
     if game.game_over:
         return
-#def obstacle_draw():
-#    obstaclegeneration.draw(obj_list = obj_list)
 
-
-def start_game():
-    game = GameState()
-    player = Character()
-    background = Background(speed=game.speed)
-    obj_list = obstaclegeneration.map_generator(probability=game.probability, frames=20)
-    draw()
-    return obj_list
-
+def levelup(level = 1):
+    levelspeed = {1:7, 2:11, 3:13, 4:15}
+    game.speed = background.speed = levelspeed[level]
+    for obj in obj_list:
+        obj.speed = levelspeed[level]
 
 def game_loop():
+    elapsed_time = time.perf_counter() # Tracks time (in seconds) so that the game speeds up as time progresses
     if keyboard.up:
         player.jump = True
     if game.player_hit == False:
@@ -255,6 +281,17 @@ def game_loop():
             if hasattr(obj,'collide'):
                 if obj.collide(player.hitbox):
                     game.make_vulnerable()
+            elif hasattr(obj,'enter_door'):
+                if obj.enter_door(player.hitbox):
+                    game.travel()
+    if elapsed_time < 60:
+        levelup(level=1)
+    elif elapsed_time < 60 * 2:
+        levelup(level=2)
+    elif elapsed_time < 60 * 3:
+        levelup(level=3)
+    elif elapsed_time < 60 * 4:
+        levelup(level=4)
 
 def update():
     if not game.game_over:
