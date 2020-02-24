@@ -1,3 +1,4 @@
+# Test update
 import pgzrun
 from random import random
 import time
@@ -11,6 +12,7 @@ TILESIZE = images.dirt.get_height()
 def remove_alpha(image): # allows for more efficient image drawing
     return image.convert_alpha()
 
+# ----------CLASSES---------- #
 class Background(object):
     images = {"background": images.background,
               "dirt" : images.dirt,
@@ -26,7 +28,7 @@ class Background(object):
         self.life_icon = remove_alpha(self.images["life"])
 
     def draw(self, lives): # draws side scrolling background and no. of lives
-        screen.blit(self.backgroundimage, (self.background_x, 0))
+        screen.blit(self.backgroundimage, (self.background_x, 0)) # 2 moving background images are required to create side scrolling background animation
         screen.blit(self.backgroundimage, (self.background2_x, 0))
         life_x, life_y = 750, 20
 
@@ -126,58 +128,117 @@ class Character(object):
         # TODO: Hit box - delete before production
         screen.draw.rect(self.hitbox, color="RED")
 
+# class ObstacleGeneration(object):
+#     def __init__(self, speed = 7):
+#         self.level = 1
+#         self.object_id = {1: 'spike', 2:'shrub'}
+#         self.speed = speed
+#     def map_generator(self, obstacle_probability = 0.005, frames = 25):
+#         self.buffer_multiplier = 0.75 # Controls space between objects on map
+#         self.obstacle_x_buffer = int(player.width * self.buffer_multiplier * 2) # minimum space between obstacles to allow for player have a chance to jump and land to avoid obstacles
+#         self.shrub_buffer = int(Shrub.image.get_width() * self.buffer_multiplier)
+#         self.rock_buffer = int(Rock.image.get_width() * self.buffer_multiplier)
+#         self.door_buffer = int(Door.image.get_width() * self.buffer_multiplier)
+#         game_map = [0] * int(WIDTH * 0.5) # First 2 frames of all games will have no objects generated
+#         for frame in range(1, frames + 1):
+#             for _ in range(self.obstacle_x_buffer): # Ensure that the starts and ends of object frames do not have objects generating too close to each other
+#                 game_map.append(0)
+#             while len(game_map) < WIDTH * frame:
+#                 rand = random()
+#                 if rand < obstacle_probability:
+#                     game_map.append(1)
+#                     for _ in range(self.obstacle_x_buffer):
+#                         if len(game_map) < WIDTH * frame:
+#                             game_map.append(0)
+#                 if rand > obstacle_probability and rand < (obstacle_probability+0.001):
+#                     game_map.append(2)
+#                     for _ in range(self.shrub_buffer):
+#                         if len(game_map) < WIDTH * frame:
+#                             game_map.append(0)
+#                 if rand > (obstacle_probability+0.001) and rand < (obstacle_probability+0.002):
+#                     game_map.append(3)
+#                     for _ in range(self.rock_buffer):
+#                         if len(game_map) < WIDTH * frame:
+#                             game_map.append(0)
+#                 if rand > (obstacle_probability + 0.002) and rand < (obstacle_probability + 0.003):
+#                     game_map.append(4)
+#                     for _ in range(self.door_buffer):
+#                         if len(game_map) < WIDTH * frame:
+#                             game_map.append(0)
+#                 else:
+#                     game_map.append(0)
+#
+#         print(game_map)
+#
+#         self.obj_list = []
+#         for pixel in enumerate(game_map): #TODO: Only store subset of objects in obj_list
+#             if pixel[1] == 1:
+#                 self.obj_list.append(Spike(speed=self.speed, x=pixel[0]*4))
+#             if pixel[1] == 2:
+#                 self.obj_list.append(Shrub(speed = self.speed, x = pixel[0]*4))
+#             if pixel[1] == 3:
+#                 self.obj_list.append(Rock(speed = self.speed, x = pixel[0]*4))
+#             if pixel[1] == 4:
+#                 self.obj_list.append(Door(speed=self.speed, x=pixel[0]*4))
+#         return self.obj_list
+
 class ObstacleGeneration(object):
-    def __init__(self, speed = 7):
+    def __init__(self, speed=7):
         self.level = 1
-        self.object_id = {1: 'spike', 2:'shrub'}
         self.speed = speed
-    def map_generator(self, obstacle_probability = 0.005, frames = 100):
-        self.buffer_multiplier = 3
-        self.obstacle_x_buffer = player.width * self.buffer_multiplier * 2 # minimum space between obstacles to allow for player have a chance to jump and land to avoid obstacles
-        self.shrub_buffer = Shrub.image.get_width() * self.buffer_multiplier
-        self.rock_buffer = Rock.image.get_width() * self.buffer_multiplier
-        self.door_buffer = Door.image.get_width() * self.buffer_multiplier
-        game_map = [0] * WIDTH * 2 # First 2 frames of all games will have no objects generated
-        for frame in range(1, frames + 1):
-            for _ in range(self.obstacle_x_buffer): # Ensure that the starts and ends of object frames do not have objects generating too close to each other
-                game_map.append(0)
-            while len(game_map) < WIDTH * frame:
+
+    def map_generator(self, obstacle_probability=0.005, frames=50):
+        self.buffer_multiplier = 0.75  # Controls space between objects on map
+        self.obstacle_x_buffer = int(player.width * self.buffer_multiplier * 2)  # minimum space between obstacles to allow for player have a chance to jump and land to avoid obstacles
+        self.shrub_buffer = int(Shrub.image.get_width() * self.buffer_multiplier)
+        self.rock_buffer = int(Rock.image.get_width() * self.buffer_multiplier)
+        self.door_buffer = int(Door.image.get_width() * self.buffer_multiplier)
+        game_map = [[0] * WIDTH, [0] * WIDTH]  # First 2 frames of all games will have no objects generated
+        for _ in range(frames):
+            frame = [0] * self.obstacle_x_buffer # Create buffer at start of frame to ensure that objects are not drawn too closely to each other at the start & end edges of frames
+            while len(frame) < WIDTH:
                 rand = random()
                 if rand < obstacle_probability:
-                    game_map.append(1)
+                    frame.append(1)
                     for _ in range(self.obstacle_x_buffer):
-                        if len(game_map) < WIDTH * frame:
-                            game_map.append(0)
-                if rand > obstacle_probability and rand < (obstacle_probability+0.001):
-                    game_map.append(2)
+                        if len(frame) < WIDTH:
+                            frame.append(0)
+                if rand > obstacle_probability and rand < (obstacle_probability + 0.001):
+                    frame.append(2)
                     for _ in range(self.shrub_buffer):
-                        if len(game_map) < WIDTH * frame:
-                            game_map.append(0)
-                if rand > (obstacle_probability+0.001) and rand < (obstacle_probability+0.002):
-                    game_map.append(3)
+                        if len(frame) < WIDTH:
+                            frame.append(0)
+                if rand > (obstacle_probability + 0.001) and rand < (obstacle_probability + 0.002):
+                    frame.append(3)
                     for _ in range(self.rock_buffer):
-                        if len(game_map) < WIDTH * frame:
-                            game_map.append(0)
+                        if len(frame) < WIDTH:
+                            frame.append(0)
                 if rand > (obstacle_probability + 0.002) and rand < (obstacle_probability + 0.003):
-                    game_map.append(4)
+                    frame.append(4)
                     for _ in range(self.door_buffer):
-                        if len(game_map) < WIDTH * frame:
-                            game_map.append(0)
+                        if len(frame) < WIDTH:
+                            frame.append(0)
                 else:
-                    game_map.append(0)
+                    frame.append(0)
+
+            game_map.append(frame)
 
         print(game_map)
-        self.obj_list = []
-        for pixel in enumerate(game_map):
+        return game_map
+
+    def obj_generator(self, map_frame):
+        obj_list = []
+        for pixel in enumerate(map_frame):  # TODO: Only store subset of objects in obj_list
             if pixel[1] == 1:
-                self.obj_list.append(Spike(speed=self.speed, x=pixel[0]))
+                obj_list.append(Spike(speed=self.speed, x=pixel[0] * 4))
             if pixel[1] == 2:
-                self.obj_list.append(Shrub(speed = self.speed, x = pixel[0]))
+                obj_list.append(Shrub(speed=self.speed, x=pixel[0] * 4))
             if pixel[1] == 3:
-                self.obj_list.append(Rock(speed = self.speed, x = pixel[0]))
+                obj_list.append(Rock(speed=self.speed, x=pixel[0] * 4))
             if pixel[1] == 4:
-                self.obj_list.append(Door(speed=self.speed, x=pixel[0]))
-        return self.obj_list
+                obj_list.append(Door(speed=self.speed, x=pixel[0] * 4))
+        return obj_list
+
 
 class GameObject(object): # Class for obstacles & scenery objects
     image = images.shrub
@@ -250,18 +311,22 @@ class Rock(Shrub):
 
     def __init__(self, speed, x = WIDTH,):
         super().__init__(speed, x)
-
+# ------GAME INITIATION------ #
 game = GameState()
 player = Character()
 background = Background()
 obstaclegeneration = ObstacleGeneration()
-obj_list = obstaclegeneration.map_generator(obstacle_probability = game.obstacle_probability, frames = 100)
+game_map = obstaclegeneration.map_generator(obstacle_probability = game.obstacle_probability, frames = 50)
+
 
 def draw():
     if not game.game_over:
         background.draw(lives = game.lives)
-        for obj in obj_list:
-            obj.draw()
+        for frame in game_map:
+            print('frame', frame)
+            obj_list = obstaclegeneration.obj_generator(frame)
+            for obj in obj_list:
+                obj.draw()
         player.draw()
     if game.game_over:
         return
