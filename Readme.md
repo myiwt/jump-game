@@ -13,4 +13,4 @@ Thanks to Bayat Games for the awesome game images!! https://bayat.itch.io/platfo
 
 ### Demo
 
-![link to demo video](https://github.com/spacecatbug/jump-game/blob/master/images/WalkRightInDemo.gif)
+![link to demo video](https://github.com/myiwt/jump-game/blob/main/images/WalkRightInDemo.gif)
